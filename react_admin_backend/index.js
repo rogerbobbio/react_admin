@@ -22,7 +22,7 @@ app.use('/api/mysql', appRouter);
 
 
 app.get('*',(req, res)=> {
-    res.sendFile(path.resolve(__dirname,'public/index.html'));
+    res.send({message: "Server Live!!!"});
 });
 
 app.listen(process.env.PORT, () => {
