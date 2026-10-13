@@ -104,10 +104,6 @@ async function createMovie(req, res) {
 }
 
 async function updateMovie(req, res) {
-  const uid = req.uid;
-  req.body.user_update = uid;
-  req.body.update_date = new Date();
-
   var movieId = req.params.id;
   try {
 
@@ -140,7 +136,13 @@ async function updateMovie(req, res) {
         });
       } else {
 
-        service.updateMovie(movieId, req)
+        // Lista blanca: solo se actualizan los campos editables
+        const fields = ['description', 'link', 'ranking', 'subtitle', 'serie', 'old', 'converting',
+                        'pending', 'note', 'category_id', 'actor_id', 'language_id'];
+        const values = { user_update: req.uid, update_date: new Date() };
+        fields.forEach(f => { if (req.body[f] !== undefined) values[f] = req.body[f]; });
+
+        service.updateMovie(movieId, values)
                   .then(function(movie) {
                         
                     res.send({
@@ -234,21 +236,41 @@ async function searchMovies(req, res) {
   }));
 }
 
+// Helpers para leer los query params del filtro
+const toText = v => (typeof v === 'string' ? v.trim() : '');
+const toInt = v => { const n = parseInt(v, 10); return Number.isNaN(n) ? null : n; };
+// '0' / '1' filtran; '', '3' o ausente = sin filtro
+const toBool = v => (v === '0' || v === '1' ? +v : null);
+const toDate = v => (/^\d{4}-\d{2}-\d{2}$/.test(v || '') ? v : null);
+
 async function searchMoviesByParameters(req, res) {
 
-  const description = req.query.description;
-  const categoryId = req.query.categoryId;
-  const actorId = req.query.actorId;
-  const languageId = req.query.languageId;
-  const converting = req.query.converting;
-  const pending = req.query.pending;
-  const link = req.query.link;
+  const q = req.query;
+  const limit = toInt(q.limit);
+  const offset = toInt(q.offset);
 
-  service.searchMoviesByParameters(description, link, categoryId, actorId, languageId, converting, pending)
-  .then(function(movies) {
+  const params = {
+    search: toText(q.search),
+    description: toText(q.description),
+    link: toText(q.link),
+    categoryId: toInt(q.categoryId),
+    actorId: toInt(q.actorId),
+    languageId: toInt(q.languageId),
+    converting: toBool(q.converting),
+    pending: toBool(q.pending),
+    subtitle: toBool(q.subtitle),
+    old: toBool(q.old),
+    rankingMin: toInt(q.rankingMin),
+    dateFrom: toDate(q.dateFrom),
+    dateTo: toDate(q.dateTo),
+    orderBy: toText(q.orderBy),
+    limit: limit > 0 ? Math.min(limit, 100) : null,
+    offset: offset > 0 ? offset : 0,
+  };
 
-    const totalRecords = movies.length;
-         
+  service.searchMoviesByParameters(params)
+  .then(function({ movies, totalRecords }) {
+
     res.send({
       ok: true,
       totalRecords,

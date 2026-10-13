@@ -46,11 +46,8 @@ function searchMovies(searchValue) {
     });    
 }
 
-function searchMoviesByParameters(description, link, categoryId, actorId, languageId, converting, pending) {
-    return dataAccess.searchMoviesByParameters(description, link, categoryId, actorId, languageId, converting, pending)
-    .then(function(res){
-        return res;
-    });    
+function searchMoviesByParameters(params) {
+    return dataAccess.searchMoviesByParameters(params);
 }
 
 function createMovie(description, link, ranking, subtitle,
@@ -64,8 +61,8 @@ function createMovie(description, link, ranking, subtitle,
     });    
 }
 
-function updateMovie(movieId, req) {    
-    return dataAccess.updateMovie(movieId, req)
+function updateMovie(movieId, values) {
+    return dataAccess.updateMovie(movieId, values)
     .then(function(res){
         return res;
     });    

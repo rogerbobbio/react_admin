@@ -25,14 +25,14 @@ function createMovie(description, link, ranking, subtitle,
        })
 }
 
-function updateMovie(movieId, req) {    
+function updateMovie(movieId, fields) {
     return new Promise(( resolve, reject ) => {
         pool.getConnection( (err, connection) => {
          if (err) {
           reject( err )
          } else {
             var values = [
-                req.body,
+                fields,
                 movieId
             ];
             var sql = 'UPDATE movie SET ? WHERE id = ?';
@@ -216,68 +216,92 @@ function searchMovies(searchValue) {
        })
 }
 
-function searchMoviesByParameters(description, link, categoryId, actorId, languageId, converting, pending) {
+// Escapa los comodines de LIKE para que '%' y '_' se busquen como texto
+const escapeLike = v => '%' + v.replace(/[\\%_]/g, '\\$&') + '%';
 
+const ORDER_BY = {
+    description: 'm.description',
+    recent: 'm.create_date DESC',
+    ranking: 'm.ranking DESC, m.description',
+};
+
+function runQuery(sql, params) {
     return new Promise(( resolve, reject ) => {
-        pool.getConnection( (err, connection) => {
-         if (err) {
-          reject( err )
-         } else {
-            var filters = [];
-            var sql = 'SELECT m.*,  '+
-                        '       c.description as category_description, '+
-                        '       a.name as actor_name, '+
-                        '       l.description as language_description '+
-                        ' FROM movie m   '+
-                        ' JOIN movie_category c ON c.id = m.category_id '+
-                        ' JOIN actor a ON a.id = m.actor_id '+
-                        ' JOIN language l ON l.id = m.language_id '+
-                        ' WHERE 1=1 ';
-                        if (description != '') {
-                            var value = '%' + description + '%';
-                            sql = sql + '   AND m.description like ?';
-                            filters.push(value);
-                        }
+        pool.query(sql, params, ( err, rows ) => (err ? reject(err) : resolve(rows)));
+    });
+}
 
-                        if (link != '') {
-                            var value = '%' + link + '%';
-                            sql = sql + '   AND m.link like ?';
-                            filters.push(value);
-                        }
+async function searchMoviesByParameters(p) {
 
-                        if (categoryId > 0) {
-                            sql = sql + '   AND m.category_id = ? ';
-                            filters.push(categoryId);
-                        }
-                        if (actorId > 0) {
-                            sql = sql + '   AND m.actor_id = ?';
-                            filters.push(actorId);
-                        }
-                        if (languageId > 0) {
-                            sql = sql + '   AND m.language_id =?';
-                            filters.push(languageId);
-                        }
-                        if (converting < 3) {
-                            sql = sql + '   AND m.converting =?';
-                            filters.push(converting);
-                        }
-                        if (pending > 0) {
-                            sql = sql + '   AND m.pending =?';
-                            filters.push(pending);
-                        }
-   
-                        sql = sql + ' ORDER BY m.description';
-          connection.query(sql, filters, ( err, rows) => {
-           if ( err ) {
-            reject( err )
-           } else {
-            resolve( rows )
-           }
-           connection.release()
-          })
-         }
-        })
-       })
+    var filters = [];
+    var where = ' WHERE 1=1 ';
+
+    if (p.search) {
+        var value = escapeLike(p.search);
+        where += '   AND (m.description LIKE ? OR m.link LIKE ? OR a.name LIKE ?)';
+        filters.push(value, value, value);
+    }
+    if (p.description) {
+        where += '   AND m.description LIKE ?';
+        filters.push(escapeLike(p.description));
+    }
+    if (p.link) {
+        where += '   AND m.link LIKE ?';
+        filters.push(escapeLike(p.link));
+    }
+    if (p.categoryId > 0) {
+        where += '   AND m.category_id = ?';
+        filters.push(p.categoryId);
+    }
+    if (p.actorId > 0) {
+        where += '   AND m.actor_id = ?';
+        filters.push(p.actorId);
+    }
+    if (p.languageId > 0) {
+        where += '   AND m.language_id = ?';
+        filters.push(p.languageId);
+    }
+    ['converting', 'pending', 'subtitle', 'old'].forEach(field => {
+        if (p[field] !== null) {
+            where += `   AND m.${field} = ?`;
+            filters.push(p[field]);
+        }
+    });
+    if (p.rankingMin > 0) {
+        where += '   AND m.ranking >= ?';
+        filters.push(p.rankingMin);
+    }
+    if (p.dateFrom) {
+        where += '   AND m.create_date >= ?';
+        filters.push(p.dateFrom);
+    }
+    if (p.dateTo) {
+        where += '   AND m.create_date < DATE_ADD(?, INTERVAL 1 DAY)';
+        filters.push(p.dateTo);
+    }
+
+    var from = ' FROM movie m   '+
+               ' JOIN movie_category c ON c.id = m.category_id '+
+               ' JOIN actor a ON a.id = m.actor_id '+
+               ' JOIN language l ON l.id = m.language_id ';
+
+    var sql = 'SELECT m.*,  '+
+              '       c.description as category_description, '+
+              '       a.name as actor_name, '+
+              '       l.description as language_description '+
+              from + where +
+              ' ORDER BY ' + (ORDER_BY[p.orderBy] || ORDER_BY.description);
+
+    if (!p.limit) {
+        const movies = await runQuery(sql, filters);
+        return { movies, totalRecords: movies.length };
+    }
+
+    const [movies, count] = await Promise.all([
+        runQuery(sql + ' LIMIT ? OFFSET ?', [...filters, p.limit, p.offset]),
+        runQuery('SELECT COUNT(*) AS total' + from + where, filters),
+    ]);
+    return { movies, totalRecords: count[0].total };
 }
 
 module.exports = {

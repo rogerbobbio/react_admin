@@ -55,8 +55,8 @@ app.get('/', validateJWT , controller.getAllMovies);
 // getMovieInfo by id
 app.get('/:id', validateJWT, controller.getMovieInfo);
 // searchMovies
-app.get('/search/main/:search', controller.searchMovies);
+app.get('/search/main/:search', validateJWT, controller.searchMovies);
 // searchMoviesByParameters
-app.get('/search/byparam/', controller.searchMoviesByParameters);
+app.get('/search/byparam/', validateJWT, controller.searchMoviesByParameters);
 
 module.exports = app;

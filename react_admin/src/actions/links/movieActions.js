@@ -163,8 +163,9 @@ const applyFilter = () => async (dispatch, getState) => {
                 categoryId: category ? +category.value : 0,
                 actorId: actor ? +actor.value : 0,
                 languageId: language ? +language.value : 0,
-                converting: converting ? +converting.value : 3,
-                pending: pending ? +pending.value : 0,
+                // 3 = sin filtro
+                converting: converting && converting.value !== '' ? +converting.value : 3,
+                pending: pending && pending.value !== '' ? +pending.value : 3,
             }
 
             const resp = await fetchConToken(endpoint, data);
