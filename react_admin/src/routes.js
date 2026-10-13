@@ -49,7 +49,6 @@ const MovieCategory = React.lazy(() => import('./views/pages/links/movieCategori
 const Actors = React.lazy(() => import('./views/pages/links/actors/actorsScreen'));
 const Actor = React.lazy(() => import('./views/pages/links/actors/actorScreen'));
 const Movies = React.lazy(() => import('./views/pages/links/movie/moviesScreen'));
-const Movie = React.lazy(() => import('./views/pages/links/movie/movieScreen'));
 
 const Countries = React.lazy(() => import('./views/pages/fifa/countries/countriesScreen'));
 const Country = React.lazy(() => import('./views/pages/fifa/countries/countryScreen'));
@@ -117,8 +116,8 @@ const routes = [
   { path: '/movieCategory/:id', exact: true,  name: 'Categoria de Pelicula', component: MovieCategory },
   { path: '/actors', exact: true,  name: 'Actores', component: Actors },
   { path: '/actor/:id', exact: true,  name: 'Actor', component: Actor },
-  { path: '/movies', exact: true,  name: 'Links', component: Movies },
-  { path: '/movie/:id', exact: true,  name: 'Link', component: Movie },
+  // Una sola ruta: /movie/:id abre el formulario en un modal sobre la lista
+  { path: ['/movies', '/movie/:id'], exact: true,  name: 'Links', component: Movies },
 
   { path: '/countries', exact: true,  name: 'Paises', component: Countries },
   { path: '/country/:id', exact: true,  name: 'Pais', component: Country },

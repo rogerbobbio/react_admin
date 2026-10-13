@@ -4,30 +4,41 @@ const newMovie = {
   id: '',
   description: '',
   link: '',
-  ranking: '3',
-  subtitle: false,
-  serie: false,
-  old: false,
-  converting: false,
-  pending: false,
-  note: '', 
-  category_id: 0, 
-  actor_id: 2,
-  language_id: 1
+  ranking: 3,
+  subtitle: 0,
+  serie: 0,
+  old: 0,
+  converting: 0,
+  pending: 0,
+  note: '',
+  // Sin valores precargados: se eligen siempre a conciencia
+  category_id: '',
+  actor_id: '',
+  language_id: ''
+}
+
+export const initialMovieFilter = {
+  search: '',
+  category: null,
+  language: null,
+  actor: null,
+  status: null,       // 'pending' | 'converting' | 'ready'
+  rankingMin: 0,
+  subtitle: '',       // '' | '1' | '0'
+  old: '',            // '' | '1' | '0'
+  dateFrom: '',
+  dateTo: '',
+  orderBy: 'recent',
+  page: 1,
+  showAll: false,
 }
 
 const init = {
   movies: [],
+  totalRecords: 0,
   loading: false,
-  filter: {
-    description: null,
-    link: null,
-    category: null,
-    actor: null,
-    language: null,
-    converting: null,
-    pending: null,
-  },
+  saving: false,
+  filter: initialMovieFilter,
   movie: newMovie,
 }
 
